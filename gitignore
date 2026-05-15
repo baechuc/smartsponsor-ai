@@ -1,0 +1,28 @@
+# Model files (terlalu besar untuk GitHub)
+best_indobert_model/
+svm_model.pkl
+*.pkl
+*.pt
+*.bin
+
+# Dataset
+dataset/
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output
+sponsorsmart_output/
