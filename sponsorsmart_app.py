@@ -50,8 +50,7 @@ st.markdown('<p class="main-title">🎯 SponsorSmart AI</p>', unsafe_allow_html=
 st.markdown('<p class="subtitle">Sistem Pendukung Keputusan Penilaian Kelayakan Proposal Sponsorship</p>', unsafe_allow_html=True)
 st.divider()
 
-MODEL_PATH    = "./best_indobert_model"
-SVM_PATH      = "./svm_model.pkl"
+HF_REPO_ID    = "calpycbara/sponsorsmart-indobert"
 OCR_THRESHOLD = 50
 
 RUBRIC_KEYWORDS = {
@@ -99,19 +98,21 @@ THRESHOLDS = {
 @st.cache_resource
 def load_bert_model():
     try:
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-        model     = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+        tokenizer = AutoTokenizer.from_pretrained(HF_REPO_ID)
+        model     = AutoModelForSequenceClassification.from_pretrained(HF_REPO_ID)
         model.eval()
         return tokenizer, model
-    except:
+    except Exception as e:
         return None, None
 
 @st.cache_resource
 def load_svm_model():
     try:
-        with open(SVM_PATH, "rb") as f:
+        from huggingface_hub import hf_hub_download
+        svm_path = hf_hub_download(repo_id=HF_REPO_ID, filename="svm_model.pkl")
+        with open(svm_path, "rb") as f:
             return pickle.load(f)
-    except:
+    except Exception as e:
         return None
 
 def extract_text(uploaded_file) -> tuple:
