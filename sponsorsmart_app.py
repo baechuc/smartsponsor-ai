@@ -55,38 +55,38 @@ OCR_THRESHOLD = 50
 
 RUBRIC_KEYWORDS = {
     "Exposure": [
-        r"\\b\\d[\\d.]*\\s*(?:peserta|pengunjung|penonton|orang|hadirin)\\b",
-        r"\\b(?:instagram|youtube|tiktok|facebook|twitter|linkedin)\\b",
-        r"\\b(?:media sosial|live streaming|publikasi|promosi|liputan)\\b",
-        r"\\b(?:followers|subscriber|views|reach|tayangan)\\b",
-        r"\\b(?:poster|banner|flyer|spanduk|baliho|pamflet)\\b",
+        r"\b\d[\d.]*\s*(?:peserta|pengunjung|penonton|orang|hadirin)\b",
+        r"\b(?:instagram|youtube|tiktok|facebook|twitter|linkedin)\b",
+        r"\b(?:media sosial|live streaming|publikasi|promosi|liputan)\b",
+        r"\b(?:followers|subscriber|views|reach|tayangan)\b",
+        r"\b(?:poster|banner|flyer|spanduk|baliho|pamflet)\b",
     ],
     "Relevansi": [
-        r"\\b(?:teknologi|digital|startup|inovasi|bisnis|korporat)\\b",
-        r"\\b(?:pendidikan|universitas|kampus|mahasiswa|akademis)\\b",
-        r"\\b(?:olahraga|kesehatan|lifestyle|sport|atletik)\\b",
-        r"\\b(?:seni|budaya|musik|festival|entertainment|hiburan)\\b",
-        r"\\b(?:sesuai|relevan|sejalan|mendukung)\\s+(?:dengan|visi|misi|brand)\\b",
+        r"\b(?:teknologi|digital|startup|inovasi|bisnis|korporat)\b",
+        r"\b(?:pendidikan|universitas|kampus|mahasiswa|akademis)\b",
+        r"\b(?:olahraga|kesehatan|lifestyle|sport|atletik)\b",
+        r"\b(?:seni|budaya|musik|festival|entertainment|hiburan)\b",
+        r"\b(?:sesuai|relevan|sejalan|mendukung)\s+(?:dengan|visi|misi|brand)\b",
     ],
     "Benefit": [
-        r"\\b(?:logo|branding|brand awareness|visibilitas)\\b",
-        r"\\b(?:logo placement|official sponsor|title sponsor|presenting sponsor)\\b",
-        r"\\b(?:booth|stand|pameran|aktivasi brand|exhibition)\\b",
-        r"\\b(?:mention|endorse|konten sponsor|publikasi sponsor)\\b",
-        r"\\b(?:tiket gratis|vip|akses eksklusif|goodie bag|merchandise)\\b",
+        r"\b(?:logo|branding|brand awareness|visibilitas)\b",
+        r"\b(?:logo placement|official sponsor|title sponsor|presenting sponsor)\b",
+        r"\b(?:booth|stand|pameran|aktivasi brand|exhibition)\b",
+        r"\b(?:mention|endorse|konten sponsor|publikasi sponsor)\b",
+        r"\b(?:tiket gratis|vip|akses eksklusif|goodie bag|merchandise)\b",
     ],
     "Anggaran": [
-        r"(?:rp|idr)\\.?\\s*[\\d.,]{6,15}",
-        r"(?:anggaran|biaya|dana|investasi|kontribusi|nominal)\\s*[:=]?\\s*(?:rp)?[\\d.,]{6,15}",
-        r"\\b(?:paket)\\s+(?:platinum|gold|silver|bronze|diamond)\\b",
-        r"\\b(?:rab|rencana anggaran biaya|kebutuhan dana)\\b",
+        r"(?:rp|idr)\.?\s*[\d.,]{6,15}",
+        r"(?:anggaran|biaya|dana|investasi|kontribusi|nominal)\s*[:=]?\s*(?:rp)?[\d.,]{6,15}",
+        r"\b(?:paket)\s+(?:platinum|gold|silver|bronze|diamond)\b",
+        r"\b(?:rab|rencana anggaran biaya|kebutuhan dana)\b",
     ],
     "Kredibilitas": [
-        r"\\b(?:himpunan|bem|osis|komunitas|lembaga|yayasan|pt\\.|cv\\.|organisasi)\\b",
-        r"\\b(?:susunan panitia|struktur organisasi|divisi|sie)\\b",
-        r"\\b(?:ketua|sekretaris|bendahara|koordinator|penanggung jawab)\\b",
-        r"\\b(?:timeline|jadwal|rundown|susunan acara|agenda)\\b",
-        r"\\b(?:contact person|cp|whatsapp|narahubung|email|telp)\\b",
+        r"\b(?:himpunan|bem|osis|komunitas|lembaga|yayasan|pt\.|cv\.|organisasi)\b",
+        r"\b(?:susunan panitia|struktur organisasi|divisi|sie)\b",
+        r"\b(?:ketua|sekretaris|bendahara|koordinator|penanggung jawab)\b",
+        r"\b(?:timeline|jadwal|rundown|susunan acara|agenda)\b",
+        r"\b(?:contact person|cp|whatsapp|narahubung|email|telp)\b",
     ]
 }
 
@@ -138,7 +138,7 @@ def extract_text(uploaded_file):
             for page in pdf.pages[:10]:
                 text = page.extract_text()
                 if text:
-                    full_text += text + "\\n"
+                    full_text += text + "\n"
     except:
         pass
     if len(full_text.strip()) < OCR_THRESHOLD:
@@ -146,7 +146,7 @@ def extract_text(uploaded_file):
         try:
             images = convert_from_path(tmp_path, first_page=1, last_page=3)
             for img in images:
-                full_text += pytesseract.image_to_string(img, lang="ind") + "\\n"
+                full_text += pytesseract.image_to_string(img, lang="ind") + "\n"
         except:
             full_text = ""
     os.unlink(tmp_path)
@@ -288,7 +288,7 @@ if uploaded_file is not None:
                 """, unsafe_allow_html=True)
 
         st.pyplot(render_score_chart(rubric_result["scores"]))
-        st.markdown(f"**Total Skor Rubric: {rubric_result[chr(39)+'total'+chr(39)]}/5**")
+        st.markdown(f"**Total Skor Rubric: {rubric_result['total']}/5**")
 
         with st.expander("🔍 Detail Bukti per Variabel"):
             for var, evid in rubric_result["evidences"].items():
