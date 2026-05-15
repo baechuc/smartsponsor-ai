@@ -98,21 +98,25 @@ THRESHOLDS = {
 
 @st.cache_resource
 def load_bert_model():
+    if not os.path.isdir(MODEL_PATH):
+        return None, None, f"Folder '{MODEL_PATH}' tidak ditemukan."
     try:
         tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
         model     = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
         model.eval()
-        return tokenizer, model
-    except:
-        return None, None
+        return tokenizer, model, None
+    except Exception as e:
+        return None, None, str(e)
 
 @st.cache_resource
 def load_svm_model():
+    if not os.path.isfile(SVM_PATH):
+        return None, f"File '{SVM_PATH}' tidak ditemukan."
     try:
         with open(SVM_PATH, "rb") as f:
-            return pickle.load(f)
-    except:
-        return None
+            return pickle.load(f), None
+    except Exception as e:
+        return None, str(e)
 
 def extract_text(uploaded_file) -> tuple:
     import tempfile
@@ -204,7 +208,8 @@ def render_score_chart(scores: dict):
     red   = mpatches.Patch(color="#e74c3c", label="Tidak Terpenuhi (0)")
     ax.legend(handles=[green, red], loc="lower right")
     plt.tight_layout()
-    return fig
+    st.pyplot(fig)
+    plt.close(fig)
 
 # ── Sidebar ──────────────────────────────────────────
 with st.sidebar:
@@ -214,6 +219,26 @@ with st.sidebar:
         "Pilih Model Prediksi:",
         ["IndoBERT (Rekomendasi)", "SVM + TF-IDF", "Keduanya (Bandingkan)"]
     )
+
+    # ── Status ketersediaan model ──
+    st.divider()
+    st.markdown("### 🔌 Status Model")
+    bert_available = os.path.isdir(MODEL_PATH)
+    svm_available  = os.path.isfile(SVM_PATH)
+    st.markdown(
+        f"{'✅' if bert_available else '❌'} **IndoBERT** — "
+        f"{'Siap' if bert_available else f'Tidak ditemukan (`{MODEL_PATH}`)'}"
+    )
+    st.markdown(
+        f"{'✅' if svm_available else '❌'} **SVM** — "
+        f"{'Siap' if svm_available else f'Tidak ditemukan (`{SVM_PATH}`)'}"
+    )
+    if not bert_available and not svm_available:
+        st.warning("⚠️ Kedua model tidak ditemukan. Analisis akan menggunakan **heuristik rubric** saja.")
+    elif not bert_available and "IndoBERT" in model_choice:
+        st.warning("⚠️ IndoBERT tidak ditemukan. Pilih SVM atau jalankan notebook training terlebih dahulu.")
+    elif not svm_available and "SVM" in model_choice:
+        st.warning("⚠️ SVM tidak ditemukan. Pilih IndoBERT atau jalankan notebook training terlebih dahulu.")
     st.divider()
     st.markdown("### 📖 Tentang SponsorSmart AI")
     st.markdown("""
@@ -287,7 +312,7 @@ if uploaded_file is not None:
                 </div>
                 """, unsafe_allow_html=True)
 
-        st.pyplot(render_score_chart(rubric_result["scores"]))
+        render_score_chart(rubric_result["scores"])
         st.markdown(f"**Total Skor Rubric: {rubric_result['total']}/5**")
 
         with st.expander("🔍 Detail Bukti per Variabel"):
@@ -306,7 +331,7 @@ if uploaded_file is not None:
         if model_choice in ["IndoBERT (Rekomendasi)", "Keduanya (Bandingkan)"]:
             with bert_col:
                 with st.spinner("🧠 Prediksi IndoBERT..."):
-                    tokenizer, bert_model = load_bert_model()
+                    tokenizer, bert_model, bert_err = load_bert_model()
                     bert_result = predict_bert(full_text, tokenizer, bert_model)
 
                 if bert_result["label"]:
@@ -318,23 +343,36 @@ if uploaded_file is not None:
                     st.caption(f"Confidence: {conf:.1f}%")
                     st.caption(f"P(Layak)={bert_result['prob_layak']*100:.1f}% | P(Tidak Layak)={bert_result['prob_tidak']*100:.1f}%")
                 else:
-                    st.warning("Model IndoBERT tidak ditemukan. Pakai hasil rubric saja.")
+                    st.warning(f"⚠️ Model IndoBERT tidak dapat dimuat.\n\n**Penyebab:** {bert_err}\n\n💡 Jalankan notebook training untuk menghasilkan model, lalu letakkan folder `best_indobert_model/` di direktori yang sama dengan app ini.")
+                    st.info("📋 Keputusan final akan menggunakan skor rubric heuristik.")
 
         if model_choice in ["SVM + TF-IDF", "Keduanya (Bandingkan)"]:
             with svm_col:
                 with st.spinner("⚙️ Prediksi SVM..."):
-                    svm_model = load_svm_model()
+                    svm_model, svm_err = load_svm_model()
                     if svm_model:
-                        svm_label   = svm_model.predict([full_text])[0]
-                        svm_prob    = svm_model.predict_proba([full_text])[0]
-                        svm_conf    = max(svm_prob) * 100
-                        badge_class = "layak-badge" if svm_label == "Layak" else "tidak-layak-badge"
-                        st.markdown("**SVM + TF-IDF:**")
-                        st.markdown(f'<span class="{badge_class}">{svm_label}</span>', unsafe_allow_html=True)
-                        st.progress(int(svm_conf))
-                        st.caption(f"Confidence: {svm_conf:.1f}%")
+                        try:
+                            svm_label = svm_model.predict([full_text])[0]
+                            try:
+                                svm_prob = svm_model.predict_proba([full_text])[0]
+                                svm_conf = max(svm_prob) * 100
+                            except AttributeError:
+                                # Pipeline tidak support predict_proba
+                                svm_conf = None
+                            badge_class = "layak-badge" if svm_label == "Layak" else "tidak-layak-badge"
+                            st.markdown("**SVM + TF-IDF:**")
+                            st.markdown(f'<span class="{badge_class}">{svm_label}</span>', unsafe_allow_html=True)
+                            if svm_conf is not None:
+                                st.progress(int(svm_conf))
+                                st.caption(f"Confidence: {svm_conf:.1f}%")
+                            else:
+                                st.caption("Confidence: tidak tersedia")
+                        except Exception as e:
+                            svm_label = None
+                            st.warning(f"⚠️ Error saat prediksi SVM: {e}")
                     else:
-                        st.warning("Model SVM tidak ditemukan.")
+                        st.warning(f"⚠️ Model SVM tidak dapat dimuat.\n\n**Penyebab:** {svm_err}\n\n💡 Jalankan notebook training untuk menghasilkan `svm_model.pkl`, lalu letakkan di direktori yang sama dengan app ini.")
+                        st.info("📋 Keputusan final akan menggunakan skor rubric heuristik.")
 
         st.divider()
 
